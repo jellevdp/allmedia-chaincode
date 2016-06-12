@@ -317,7 +317,7 @@ func (t *SimpleChaincode) add_track(stub *shim.ChaincodeStub, args []string) ([]
 		return nil, errors.New("Error creating new id for thing " + args[0])
 	}
 
-	err = stub.PutState(args[0], str)
+	err = stub.PutState(args[0], []byte(str))
 	if err != nil {
 		return nil, errors.New("Error putting thing data on ledger")
 	}
