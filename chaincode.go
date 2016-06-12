@@ -301,15 +301,23 @@ func (t *SimpleChaincode) add_account(stub *shim.ChaincodeStub, args []string) (
 func (t *SimpleChaincode) add_track(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 
 	// args
-	// 		0			1
-	//	   index	   track JSON object (as string)
+	// 		0			1		2		3		4
+	//	   iswc	  isrc		price	main_ben	min_ben
 
+	price, err := strconv.Atoi(args[2])
+	if err != nil { return nil, errors.New("3rd arg must be a numeric string")}
+
+	ben_arr := `[{"accountId": "` + args[3] + `", "percentage":"75"}, {"accountId": "` + args[4] + `", "percentage":"25"}]`
+	str := `{"iswc": "` + args[0] + `", "isrc": "` + args[1] + `", "price": ` + strconv.Itoa(price) + `, "beneficiary":` + ben_arr + `"}`
+
+	//		isrc, price, beneficiaries,
+	// accountId, percentage
 	id, err := append_id(stub, trackIndexStr, args[0], false)
 	if err != nil {
 		return nil, errors.New("Error creating new id for thing " + args[0])
 	}
 
-	err = stub.PutState(string(id), []byte(args[1]))
+	err = stub.PutState(args[0], str)
 	if err != nil {
 		return nil, errors.New("Error putting thing data on ledger")
 	}
@@ -369,7 +377,7 @@ func (t *SimpleChaincode) register_track(stub *shim.ChaincodeStub, args []string
 
 		// 4c. calculate amount
 		var amount int64
-		amount = beneficiary.Percentage * tr.Price
+		amount = (beneficiary.Percentage / 100 ) * tr.Price
 
 		// 4d. create PendingPayment
 		var pendingPayment Payment
