@@ -92,6 +92,7 @@ var SomeStatus = map[string]bool{
 //=================================================================================================================================
 var accountIndexStr = "_accounts"
 var trackIndexStr = "_tracks"
+var paymentIndexStr = "_payments"
 
 //==============================================================================================================================
 //	Run - Called on chaincode invoke. Takes a function name passed and calls that function. Converts some
@@ -126,11 +127,11 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
 //=================================================================================================================================
 func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
 
-	if args[0] == "get_account" {
+	if function == "get_account" {
 		return t.get_account(stub, args[1])
-	} else if args[0] == "get_track" {
+	} else if function == "get_track" {
 		return t.get_track(stub, args)
-	} else if args[0] == "get_all_tracks" {
+	} else if function == "get_all_tracks" {
 		return t.get_all_tracks(stub, args)
 	}
 
@@ -380,6 +381,8 @@ func (t *SimpleChaincode) register_track(stub *shim.ChaincodeStub, args []string
 		// 4g. Put beneficiary back in state
 		accReciptientBytes := json.Marshal(account_recipient)
 		err = stub.PutState(account_recipient.Id, accReciptientBytes)
+
+		// 4h. Append payment to payment index
 
 	}
 
