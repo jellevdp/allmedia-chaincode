@@ -29,12 +29,12 @@ type ECertResponse struct {
 }
 
 type Track struct {
-	Id     			string 			`json:"id"`
-	Title 			string 			`json:"title"`
-	Artist			string 			`json:"artist"`
-	Beneficiaries 	[]Beneficiary	`json:"beneficiaries"`
-	Content			string			`json:"content"`   			// can be a hash of the content or the url to the content
-	Price			int64			`json:"price"`
+	Isrc     			string 			`json:"isrc"`
+	Iswc	 			string 			`json:"iswc"`
+	Ipi					string 			`json:"ipi"`
+	Beneficiaries 		[]Beneficiary	`json:"beneficiaries"`
+	Content				string			`json:"content"`   			// can be a hash of the content or the url to the content
+	Price				int64			`json:"price"`
 }
 
 type Beneficiary struct {
@@ -50,8 +50,8 @@ type Account struct {
 }
 
 type Payment struct {
-	Recipient			Account		`json:"recipient"`
-	Sender				Account		`json:"sender"`
+	RecipientId			string		`json:"recipient"`
+	SenderId			string		`json:"sender"`
 	Amount				int64		`json:"amount"`
 	Completed			bool		`json:"completed"`
 }
@@ -332,30 +332,36 @@ func (t *SimpleChaincode) register_track(stub *shim.ChaincodeStub, args []string
 		return nil, errors.New("Could not fetch track " + args[0])
 	}
 	// 1b. Unmarshal track
-	var t Track
-	err = json.Unmarshal(trackBytes, &t)
-	if err != nil { return nil, errors.New("Could not unmarshal track " + trackBytes ) }
+	var tr Track
+	err = json.Unmarshal(trackBytes, &tr)
+	if err != nil {
+		return nil, errors.New("Could not unmarshal track " )
+	}
 
 	// 2. get played by account
 	playedByBytes, err := stub.GetState(args[1])
-	if err != nil { return nil, errors.New("Could not fetch track " + args[1]) }
+	if err != nil {
+		return nil, errors.New("Could not fetch track ")
+	}
 	// 2b. unmarshal account
 	var account_sender Account
 	err = json.Unmarshal(playedByBytes, &account_sender)
-	if err != nil { return nil, errors.New("Could not unmarshal account " + playedByBytes) }
+	if err != nil {
+		return nil, errors.New("Could not unmarshal account " )
+	}
 
 	// Create array for payments by sender
 	var senderPayments []Payment
 
 	// 3. loop through beneficiaries of track
-	for _, beneficiary := range t.Beneficiaries {
+	for _, beneficiary := range tr.Beneficiaries {
 
 		// 4. add a PendingPayment to their account
 
 		// 4a. get beneficiary account
 		bytes, err := stub.GetState(beneficiary.AccountId)
 		if err != nil {
-			return nil, errors.New("Unable to get thing with ID: " + track.Id)
+			return nil, errors.New("Unable to get thing with ID " )
 		}
 		// 4b. unmarshal account
 		var account_recipient Account
@@ -363,14 +369,14 @@ func (t *SimpleChaincode) register_track(stub *shim.ChaincodeStub, args []string
 
 		// 4c. calculate amount
 		var amount int64
-		amount = beneficiary.Percentage * t.Price
+		amount = beneficiary.Percentage * tr.Price
 
 		// 4d. create PendingPayment
 		var pendingPayment Payment
 		pendingPayment.Amount 		= amount
 		pendingPayment.Completed 	= false
-		pendingPayment.Recipient 	= account_recipient.Id
-		pendingPayment.Sender 		= account_sender.Id
+		pendingPayment.RecipientId 	= account_recipient.Id
+		pendingPayment.SenderId 	= account_sender.Id
 
 		// 4e. append PendingPayment to recipient
 		account_recipient.PendingPayments = append(account_recipient.PendingPayments, pendingPayment)
@@ -379,16 +385,19 @@ func (t *SimpleChaincode) register_track(stub *shim.ChaincodeStub, args []string
 		senderPayments = append(senderPayments, pendingPayment)
 
 		// 4g. Put beneficiary back in state
-		accReciptientBytes := json.Marshal(account_recipient)
+		accReciptientBytes, _ := json.Marshal(account_recipient)
 		err = stub.PutState(account_recipient.Id, accReciptientBytes)
 
 		// 4h. Append payment to payment index
 
+
 	}
 
 	// 5. append senderPayments to sender account
-	account_sender.PendingPayments = append(account_sender.PendingPayments, senderPayments)
-
+	for _, payment := range senderPayments {
+		account_sender.PendingPayments = append(account_sender.PendingPayments, payment)
+	}
+	return nil, nil
 }
 
 //==============================================================================================================================
@@ -444,9 +453,9 @@ func (t *SimpleChaincode) get_all_tracks(stub *shim.ChaincodeStub, args []string
 	var tracks []Track
 	for _, track := range tracks {
 
-		bytes, err := stub.GetState(track.Id)
+		bytes, err := stub.GetState(track.Iswc)
 		if err != nil {
-			return nil, errors.New("Unable to get thing with ID: " + track.Id)
+			return nil, errors.New("Unable to get thing with ID: " + track.Iswc)
 		}
 
 		var t Track
